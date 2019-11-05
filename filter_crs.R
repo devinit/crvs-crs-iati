@@ -25,6 +25,7 @@ keep = c(
   "agency_name",
   "recipient_name",
   "year",
+  "purpose_code",
   "usd_commitment",
   "usd_disbursement",
   "project_title",
@@ -76,10 +77,11 @@ crvs = subset(
 # 
 # Sector
 # CRS Purpose Code = 13010 (same as CRVS)
-identity = subset(
-  crs,
-  purpose_code == 13010
-)
+# identity = subset(
+#   crs,
+#   purpose_code == 13010
+# )
+identity = copy(crs)
 # IATI Only: World Bank Theme (Reporting-org=44000 Sector Vocabulary=98 Code=000434)
 # Title or description
 # national identity
