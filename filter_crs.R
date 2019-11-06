@@ -108,10 +108,11 @@ identity = subset(
 # 
 # Sector
 # CRS Purpose Code = 15151
-electoral = subset(
-  crs,
-  purpose_code == 15151
-)
+# electoral = subset(
+#   crs,
+#   purpose_code == 15151
+# )
+electoral = copy(crs)
 # Title or description
 # electoral AND register
 # election AND management

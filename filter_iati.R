@@ -23,8 +23,27 @@ setwd(script.dir)
 # 
 # Sector
 # CRS Purpose Code = 13010
+# next_uri = paste0(
+#   "https://datastore.iati.cloud/api/transactions/",
+#   "?reporting_organisation_identifier=XM-DAC-41122",
+#   # "&sector_vocabulary=99",
+#   "&sector=23-03-04",
+#   "&format=json",
+#   "&page_size=20",
+#   "&has_recipient_country=True",
+#   "&fields=",
+#   paste0(
+#     "iati_identifier,",
+#     "provider_organisation,",
+#     "participating_organisation,", # Not working
+#     "transaction_date,",
+#     "transaction_type,",
+#     "title,", # Not working
+#     "description"
+#   )
+# )
 next_uri = paste0(
-  "https://datastore.iati.cloud/api/transactions/",
+  "https://datastore.iati.cloud/api/activities/",
   "?reporting_organisation_identifier=XM-DAC-41122",
   # "&sector_vocabulary=99",
   "&sector=23-03-04",
@@ -35,9 +54,8 @@ next_uri = paste0(
   paste0(
     "iati_identifier,",
     "provider_organisation,",
-    "participating_organisation,", # Not working
-    "transaction_date,",
-    "transaction_type,",
+    "participating_organisation,",
+    "transactions,",
     "title,", # Not working
     "description"
   )
