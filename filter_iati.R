@@ -1,4 +1,4 @@
-list.of.packages <- c("data.table","httr","jsonlite")
+list.of.packages <- c("data.table","httr","jsonlite","curl")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages, repos="http://cran.us.r-project.org")
 lapply(list.of.packages, require, character.only=T)
@@ -6,6 +6,7 @@ lapply(list.of.packages, require, character.only=T)
 script.dir = "/home/alex/git/crvs-crs-iati"
 setwd(script.dir)
 
+httr::set_config(httr::config(http_version = 0))
 
 # Output required
 # Activity Id
@@ -41,7 +42,8 @@ next_uri = paste0(
     "transactions,",
     "title,",
     "descriptions,",
-    "recipient_countries"
+    "recipient_countries,",
+    "reporting_organisation"
   )
 )
 while(!is.null(next_uri)){
@@ -51,6 +53,123 @@ while(!is.null(next_uri)){
   
   results = activities_raw["results"][[1]]
   for(result in results){
+    if(length(result$reporting_organisation$narratives)>0){
+      reporting_organisation = result$reporting_organisation$narratives[[1]]$text
+    }else{
+      reporting_organisation = ""
+    }
+    if(length(result$title$narratives)>0){
+      title = result$title$narratives[[1]]$text
+    }else{
+      title = ""
+    }
+    descriptions = result$descriptions
+    description = ""
+    for(desc in descriptions){
+      if(length(desc$narratives)>0){
+        description = paste(description,desc$narratives[[1]]$text)  
+      }
+    }
+    text_search = paste(title, description)
+    
+    crvs_match = TRUE
+    if(crvs_match){
+      iati_identifier = result$iati_identifier
+      part_orgs = result$participating_organisations
+      donor_names = c()
+      implementing_names = c()
+      for(part_org in part_orgs){
+        if(part_org$role$name == "Funding"){
+          if(length(part_org$narratives)>0){
+            donor_names = c(donor_names,part_org$narratives[[1]]$text)
+          }
+        }
+        if(part_org$role$name == "Implementing"){
+          if(length(part_org$narratives)>0){
+            implementing_names = c(implementing_names,part_org$narratives[[1]]$text)
+          }
+        }
+      }
+      donor_name = paste(donor_names,collapse=";")
+      implementing_name = paste(implementing_names,collapse=";")
+      
+      recipient_countries = result$recipient_countries
+      activity_recipient = ""
+      for(recipient_country in recipient_countries){
+        if(!is.null(recipient_country$percentage)){
+          if(recipient_country$percentage == 100){
+            activity_recipient = recipient_country$country$name
+          } 
+        }
+      }
+      
+      transactions_uri = result$transactions
+      while(!is.null(transactions_uri)){
+        transactions_raw = content(GET(
+          transactions_uri
+        ))
+        
+        transactions = transactions_raw["results"][[1]]
+        for(transaction in transactions){
+          transaction_recipient = ""
+          if(!is.null(transaction$recipient_country)){
+            transaction_recipient = transaction$recipient_country$country$name
+          }
+          trans_df = data.frame(
+            reporting_organisation,
+            iati_identifier,
+            donor_name,
+            implementing_name,
+            title,
+            description,
+            activity_recipient,
+            transaction_recipient,
+            year = substr(transaction$transaction_date, 1, 4),
+            value = transaction$value,
+            currency = transaction$currency$name,
+            transaction_type = transaction$transaction_type$name
+          )
+          crvs_list[[crvs_index]] = trans_df
+          crvs_index = crvs_index + 1
+        }
+        transactions_uri = transactions_raw["next"][[1]]
+      }
+    }
+  }
+  
+  next_uri = activities_raw["next"][[1]]
+  message(next_uri)
+}
+next_uri = paste0(
+  "https://datastore.iati.cloud/api/activities/",
+  "?sector_vocabulary=1",
+  "&sector=13010",
+  "&format=json",
+  "&page_size=20",
+  "&has_recipient_country=True",
+  "&fields=",
+  paste0(
+    "iati_identifier,",
+    "participating_organisations,",
+    "transactions,",
+    "title,",
+    "descriptions,",
+    "recipient_countries,",
+    "reporting_organisation"
+  )
+)
+while(!is.null(next_uri)){
+  activities_raw = content(GET(
+    next_uri
+  ))
+  
+  results = activities_raw["results"][[1]]
+  for(result in results){
+    if(length(result$reporting_organisation$narratives)>0){
+      reporting_organisation = result$reporting_organisation$narratives[[1]]$text
+    }else{
+      reporting_organisation = ""
+    }
     if(length(result$title$narratives)>0){
       title = result$title$narratives[[1]]$text
     }else{
@@ -118,6 +237,7 @@ while(!is.null(next_uri)){
             transaction_recipient = transaction$recipient_country$country$name
           }
           trans_df = data.frame(
+            reporting_organisation,
             iati_identifier,
             donor_name,
             implementing_name,
@@ -127,6 +247,7 @@ while(!is.null(next_uri)){
             transaction_recipient,
             year = substr(transaction$transaction_date, 1, 4),
             value = transaction$value,
+            currency = transaction$currency$name,
             transaction_type = transaction$transaction_type$name
           )
           crvs_list[[crvs_index]] = trans_df
@@ -175,7 +296,8 @@ next_uri = paste0(
     "transactions,",
     "title,",
     "descriptions,",
-    "recipient_countries"
+    "recipient_countries,",
+    "reporting_organisation"
   )
 )
 while(!is.null(next_uri)){
@@ -185,6 +307,123 @@ while(!is.null(next_uri)){
   
   results = activities_raw["results"][[1]]
   for(result in results){
+    if(length(result$reporting_organisation$narratives)>0){
+      reporting_organisation = result$reporting_organisation$narratives[[1]]$text
+    }else{
+      reporting_organisation = ""
+    }
+    if(length(result$title$narratives)>0){
+      title = result$title$narratives[[1]]$text
+    }else{
+      title = ""
+    }
+    descriptions = result$descriptions
+    description = ""
+    for(desc in descriptions){
+      if(length(desc$narratives)>0){
+        description = paste(description,desc$narratives[[1]]$text)  
+      }
+    }
+    text_search = paste(title, description)
+    
+    identity_match = TRUE
+    if(identity_match){
+      iati_identifier = result$iati_identifier
+      part_orgs = result$participating_organisations
+      donor_names = c()
+      implementing_names = c()
+      for(part_org in part_orgs){
+        if(part_org$role$name == "Funding"){
+          if(length(part_org$narratives)>0){
+            donor_names = c(donor_names,part_org$narratives[[1]]$text)
+          }
+        }
+        if(part_org$role$name == "Implementing"){
+          if(length(part_org$narratives)>0){
+            implementing_names = c(implementing_names,part_org$narratives[[1]]$text)
+          }
+        }
+      }
+      donor_name = paste(donor_names,collapse=";")
+      implementing_name = paste(implementing_names,collapse=";")
+      
+      recipient_countries = result$recipient_countries
+      activity_recipient = ""
+      for(recipient_country in recipient_countries){
+        if(!is.null(recipient_country$percentage)){
+          if(recipient_country$percentage == 100){
+            activity_recipient = recipient_country$country$name
+          } 
+        }
+      }
+      
+      transactions_uri = result$transactions
+      while(!is.null(transactions_uri)){
+        transactions_raw = content(GET(
+          transactions_uri
+        ))
+        
+        transactions = transactions_raw["results"][[1]]
+        for(transaction in transactions){
+          transaction_recipient = ""
+          if(!is.null(transaction$recipient_country)){
+            transaction_recipient = transaction$recipient_country$country$name
+          }
+          trans_df = data.frame(
+            reporting_organisation,
+            iati_identifier,
+            donor_name,
+            implementing_name,
+            title,
+            description,
+            activity_recipient,
+            transaction_recipient,
+            year = substr(transaction$transaction_date, 1, 4),
+            value = transaction$value,
+            currency = transaction$currency$name,
+            transaction_type = transaction$transaction_type$name
+          )
+          identity_list[[identity_index]] = trans_df
+          identity_index = identity_index + 1
+        }
+        transactions_uri = transactions_raw["next"][[1]]
+      }
+    }
+  }
+  
+  next_uri = activities_raw["next"][[1]]
+  message(next_uri)
+}
+next_uri = paste0(
+  "https://datastore.iati.cloud/api/activities/",
+  "?sector_vocabulary=1",
+  "&sector=13010",
+  "&format=json",
+  "&page_size=20",
+  "&has_recipient_country=True",
+  "&fields=",
+  paste0(
+    "iati_identifier,",
+    "participating_organisations,",
+    "transactions,",
+    "title,",
+    "descriptions,",
+    "recipient_countries,",
+    "reporting_organisation"
+  )
+)
+while(!is.null(next_uri)){
+  activities_raw = content(GET(
+    next_uri
+  ))
+  
+  results = activities_raw["results"][[1]]
+  for(result in results){
+    if(length(result$reporting_organisation$narratives)>0){
+      reporting_organisation = result$reporting_organisation$narratives[[1]]$text
+    }else{
+      reporting_organisation = ""
+    }
     if(length(result$title$narratives)>0){
       title = result$title$narratives[[1]]$text
     }else{
@@ -250,6 +489,7 @@ while(!is.null(next_uri)){
             transaction_recipient = transaction$recipient_country$country$name
           }
           trans_df = data.frame(
+            reporting_organisation,
             iati_identifier,
             donor_name,
             implementing_name,
@@ -259,6 +499,7 @@ while(!is.null(next_uri)){
             transaction_recipient,
             year = substr(transaction$transaction_date, 1, 4),
             value = transaction$value,
+            currency = transaction$currency$name,
             transaction_type = transaction$transaction_type$name
           )
           identity_list[[identity_index]] = trans_df
@@ -303,7 +544,8 @@ next_uri = paste0(
     "transactions,",
     "title,",
     "descriptions,",
-    "recipient_countries"
+    "recipient_countries,",
+    "reporting_organisation"
   )
 )
 while(!is.null(next_uri)){
@@ -313,6 +555,11 @@ while(!is.null(next_uri)){
   
   results = activities_raw["results"][[1]]
   for(result in results){
+    if(length(result$reporting_organisation$narratives)>0){
+      reporting_organisation = result$reporting_organisation$narratives[[1]]$text
+    }else{
+      reporting_organisation = ""
+    }
     if(length(result$title$narratives)>0){
       title = result$title$narratives[[1]]$text
     }else{
@@ -374,6 +621,7 @@ while(!is.null(next_uri)){
             transaction_recipient = transaction$recipient_country$country$name
           }
           trans_df = data.frame(
+            reporting_organisation,
             iati_identifier,
             donor_name,
             implementing_name,
@@ -383,6 +631,7 @@ while(!is.null(next_uri)){
             transaction_recipient,
             year = substr(transaction$transaction_date, 1, 4),
             value = transaction$value,
+            currency = transaction$currency$name,
             transaction_type = transaction$transaction_type$name
           )
           electoral_list[[electoral_index]] = trans_df
